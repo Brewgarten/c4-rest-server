@@ -1,0 +1,2 @@
+include versioneer.py
+include c4/rest/server/_version.py

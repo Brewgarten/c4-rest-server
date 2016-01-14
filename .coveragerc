@@ -1,0 +1,19 @@
+# .coveragerc to control coverage.py
+[run]
+branch = True
+concurrency = multiprocessing
+omit =
+    */__init__.py
+    */_version.py
+    */test_*.py
+    */versioneer.py
+    /dev/shm/*
+parallel = True
+source =
+    c4
+
+[html]
+directory = test_results/coverage
+
+[xml]
+output = test_results/coverage.xml
