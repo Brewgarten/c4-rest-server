@@ -1,11 +1,11 @@
 """
 REST API request handlers
 """
+import json
 from tornado import gen
 
 from c4.rest.server import (BaseRequestHandler,
                             route)
-
 
 @route("/api")
 class API(BaseRequestHandler):
@@ -26,7 +26,8 @@ class API(BaseRequestHandler):
         data = {
             "description": "information and management interface for C4 clusters"
         }
-        self.write(data)
+        response = json.dumps(data, indent=4, sort_keys=True, separators=(',', ': '))
+        self.write(response)
 
 @route("/api/")
 class APIList(BaseRequestHandler):
@@ -51,4 +52,5 @@ class APIList(BaseRequestHandler):
                 "nodes"
             ]
         }
-        self.write(data)
+        response = json.dumps(data, indent=4, sort_keys=True, separators=(',', ': '))
+        self.write(response)

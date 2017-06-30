@@ -2,6 +2,7 @@
 REST API nodes request handlers
 
 """
+import json
 from tornado import gen
 
 from c4.rest.server import (BaseRequestHandler,
@@ -66,7 +67,7 @@ class Nodes(BaseRequestHandler):
             else:
                 self.log.error("could not retrieve node information for '%s'", node)
 
-        self.write(nodeMap.toJSON(includeClassInfo=includeClassInfo))
+        self.write(nodeMap.toJSON(includeClassInfo=includeClassInfo, pretty=True))
         self.set_header("Content-Type", "application/json; charset=UTF-8")
 
 @ClassLogger
@@ -105,4 +106,5 @@ class NodeList(BaseRequestHandler):
             "description": "list of nodes",
             "list": nodeNames
         }
-        self.write(data)
+        response = json.dumps(data, indent=4, sort_keys=True, separators=(',', ': '))
+        self.write(response)

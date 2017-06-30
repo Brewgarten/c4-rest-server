@@ -53,6 +53,8 @@ class RESTServer(DeviceManagerImplementation):
             }
             if "port" in self.properties:
                 arguments["port"] = self.properties["port"]
+            if "ssl_options" in self.properties:
+                arguments["ssl_options"] = self.properties["ssl_options"]
             self.restServerProcess = RestServerProcess(**arguments)
             self.restServerProcess.start()
 

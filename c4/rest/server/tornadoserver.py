@@ -3,6 +3,9 @@ Tornado based REST service implementation
 """
 import logging
 import multiprocessing
+import os
+import pkg_resources
+import ssl
 
 from concurrent.futures import ThreadPoolExecutor
 from tornado.httpserver import HTTPServer
@@ -46,10 +49,12 @@ class RestServerProcess(multiprocessing.Process):
     :param port: port number
     :type port: int
     """
-    def __init__(self, node, port=8888):
+    def __init__(self, node, port=8888, ssl_options=None, ssl_version=ssl.PROTOCOL_TLSv1_2):
         super(RestServerProcess, self).__init__(name="REST server")
         self.node = node
         self.port = int(port)
+        self.ssl_options = ssl_options
+        self.ssl_version = ssl_version
 
     def getHandlers(self):
         """
@@ -68,10 +73,54 @@ class RestServerProcess(multiprocessing.Process):
         """
         The implementation of the REST server process
         """
-        application = Application(handlers=self.getHandlers())
-        application.executor = ThreadPoolExecutor(10)
-        restServer = HTTPServer(application)
         try:
+            handlers = self.getHandlers()
+            self.log.info(handlers)
+            application = Application(handlers=self.getHandlers())
+            application.executor = ThreadPoolExecutor(10)
+            ssl_options = None
+            if self.ssl_options:
+                ssl_enabled = True
+                if self.ssl_options["package"]:
+                    package = self.ssl_options["package"]
+                
+                directory = ""
+                if self.ssl_options["directory"]:
+                    directory = self.ssl_options["directory"]
+                
+                if self.ssl_options["certfile"]:
+                    ssl_certificate_file = self.ssl_options["certfile"]
+                    if os.path.dirname(ssl_certificate_file) == "" and package:
+                        ssl_certificate_file = pkg_resources.resource_filename(package, directory + ssl_certificate_file)  # @UndefinedVariable
+                
+                if self.ssl_options["keyfile"]:
+                    ssl_key_file = self.ssl_options["keyfile"]
+                    if os.path.dirname(ssl_key_file) == "" and package:
+                        ssl_key_file = pkg_resources.resource_filename(package, directory + ssl_key_file)  # @UndefinedVariable        
+                
+                if not os.path.exists(ssl_certificate_file):
+                    self.log.error("SSL certificate file not found at location: %s", ssl_certificate_file)
+                    ssl_enabled = False
+                    
+                if not os.path.exists(ssl_key_file):
+                    self.log.error("SSL key file not found at location: %s", ssl_key_file)
+                    ssl_enabled = False
+                    
+                if not self.ssl_version:    
+                    self.log.error("SSL version not specified")
+                    ssl_enabled = False
+                
+                if ssl_enabled:
+                    ssl_options = {
+                        "ssl_version": self.ssl_version,
+                        "certfile": ssl_certificate_file,
+                        "keyfile": ssl_key_file
+                    }
+                    self.log.info(ssl_options)
+                else:
+                    self.log.warning("SSL options specified but unable to enable SSL for REST server")    
+    
+            restServer = HTTPServer(application, ssl_options=ssl_options)
             restServer.listen(self.port)
             IOLoop.current().start()
         except KeyboardInterrupt:
