@@ -48,6 +48,10 @@ class RESTServer(DeviceManagerImplementation):
         if self.restServerProcess and self.restServerProcess.is_alive():
             self.log.error("REST server already started")
         else:
+            if self.restServerProcess:
+                self.log.info("Start requested after restServerProcess died, cleaning up old process")
+                self.stop()
+                
             arguments = {
                 "node": self.node
             }
@@ -66,12 +70,19 @@ class RESTServer(DeviceManagerImplementation):
         if self.restServerProcess and self.restServerProcess.is_alive():
             self.restServerProcess.terminate()
             self.restServerProcess.join()
+            self.restServerProcess = None
 
     def handleStatus(self):
         """
         The handler for an incoming Status message.
         """
-        return RESTServerStatus(self.state)
+        isAlive = False
+        if self.restServerProcess:
+            isAlive = self.restServerProcess.is_alive()
+            if not isAlive:
+                # Handle case where is_alive() returns None (which is not boolean)
+                isAlive = False
+        return RESTServerStatus(self.state, isAlive=isAlive)
 
 class RESTServerStatus(DeviceManagerStatus):
     """
@@ -79,7 +90,10 @@ class RESTServerStatus(DeviceManagerStatus):
 
     :param state: state
     :type state: :class:`~c4.system.configuration.States`
+    :param isAlive: tornado server isAlive
+    :type isAlive: boolean
     """
-    def __init__(self, state):
+    def __init__(self, state, isAlive=True):
         super(RESTServerStatus, self).__init__()
         self.state = state
+        self.isAlive = isAlive
