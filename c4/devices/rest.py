@@ -2,11 +2,13 @@
 REST service device manager
 """
 from c4.rest.server import RestServerProcess
+from c4.system.configuration import States
 from c4.system.deviceManager import (DeviceManagerImplementation, DeviceManagerStatus,
                                      operation)
+from c4.system.monitoring import ClassMonitor
 from c4.utils.logutil import ClassLogger
 
-
+@ClassMonitor
 @ClassLogger
 class RESTServer(DeviceManagerImplementation):
     """
@@ -41,13 +43,19 @@ class RESTServer(DeviceManagerImplementation):
         return super(RESTServer, self).handleLocalStopDeviceManager(message, envelope)
 
     @operation
-    def start(self):
+    def start(self, isRecovery=False):
         """
         Start REST server
         """
+        if self.state == States.STARTING:
+            self.log.info("%s received start request, but state is already STARTING.", self.name)
+            return
+
         if self.restServerProcess and self.restServerProcess.is_alive():
-            self.log.error("REST server already started")
+            self.log.info("REST server already started")
+            self.state = States.RUNNING
         else:
+            self.state = States.STARTING
             if self.restServerProcess:
                 self.log.info("Start requested after restServerProcess died, cleaning up old process")
                 self.stop()
@@ -61,6 +69,10 @@ class RESTServer(DeviceManagerImplementation):
                 arguments["ssl_options"] = self.properties["ssl_options"]
             self.restServerProcess = RestServerProcess(**arguments)
             self.restServerProcess.start()
+            if isRecovery:
+                self.monitor.report(self.monitor.SUCCESS if self.restServerProcess.is_alive() else self.monitor.FAILURE)
+
+            self.state = States.RUNNING
 
     @operation
     def stop(self):
