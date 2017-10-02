@@ -1,6 +1,9 @@
 """
-REST API nodes request handlers
+Copyright (c) IBM 2015-2017. All Rights Reserved.
+Project name: c4-rest-server
+This project is licensed under the MIT License, see LICENSE
 
+REST API nodes request handlers
 """
 import json
 from tornado import gen
